@@ -70,7 +70,7 @@ export async function downloadFiles(meetings, access_token) {
         await zip(transactionDownloadDir, zipPath);
         db.set(transactionID, JSON.stringify(status));
 
-        // fs.rmSync(transactionDownloadDir, { recursive: true, force: true }); // Removes the downloaded transaction once the zip is successfully created.
+        fs.rmSync(transactionDownloadDir, { recursive: true, force: true }); // Removes the downloaded transaction once the zip is successfully created.
 
         await uploadToS3(zipPath, transactionID);
 
