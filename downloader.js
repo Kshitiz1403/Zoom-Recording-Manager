@@ -1,3 +1,5 @@
+import * as dotenv from 'dotenv' // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
+dotenv.config()
 import axios from 'axios';
 import fs from 'fs'
 import * as stream from 'stream';
@@ -5,6 +7,40 @@ import { db, downloadDirectory } from './server.js';
 import util from 'util'
 import { v4 as uuid } from 'uuid';
 import { zip } from 'zip-a-folder';
+import { GetObjectCommand, S3 } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+
+const s3Client = new S3({
+    forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+    endpoint: "https://zoom-downloads.blr1.digitaloceanspaces.com/",
+    region: "us-east-1",
+    credentials: {
+        accessKeyId: process.env.SPACES_KEY,
+        secretAccessKey: process.env.SPACES_SECRET
+    }
+});
+
+const BUCKET_NAME = "zoom-downloads"
+
+
+const uploadToS3 = async (filePath, transactionID) => {
+    const resp = await s3Client.putObject({
+        Bucket: BUCKET_NAME,
+        Key: transactionID,
+        Body: fs.createReadStream(filePath)
+    })
+
+    return resp
+}
+
+const generatePresignedURL = async (transactionID, expirationDays) => {
+
+    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: transactionID })
+    const url = await getSignedUrl(s3Client, command, { expiresIn: expirationDays * 24 * 60 * 60 })
+
+    return url
+}
 
 const pipeline = util.promisify(stream.pipeline);
 
@@ -56,18 +92,24 @@ export async function downloadFiles(meetings, access_token) {
     db.set(transactionID, JSON.stringify(obj));
     const downloads = Promise.all(promises);
 
-    (async function(){
+    (async function () {
         const status = {};
         const downloaded = await downloads;
         downloaded.map(download => status[download] = "downloaded")
 
         const transactionDownloadDir = downloadDirectory + `/${transactionID}`
-        
-        await zip(transactionDownloadDir, `./zips/${transactionID}.zip`);
+        const zipPath = `./zips/${transactionID}.zip`
+
+        await zip(transactionDownloadDir, zipPath);
         db.set(transactionID, JSON.stringify(status));
 
-        fs.rmSync(transactionDownloadDir, { recursive: true, force: true }); // Removes the downloaded transaction once the zip is successfully created.
-        
+        // fs.rmSync(transactionDownloadDir, { recursive: true, force: true }); // Removes the downloaded transaction once the zip is successfully created.
+
+        await uploadToS3(zipPath, transactionID);
+
+        const presignedURL = await generatePresignedURL(transactionID, 7);
+
+        console.log(presignedURL)
         // TODO: Upload to S3, Generate PresignURL, Send an email with the presigned URL
     }());
     return transactionID;
