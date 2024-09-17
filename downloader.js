@@ -83,6 +83,23 @@ export async function downloadFiles(meetings, access_token) {
     return transactionID;
 }
 
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
+const scheduleMeetingDeletion = async(meetingID, accessToken) =>{
+  
+  await delay( 10 * 60 * 1000)
+  
+  const deleted = await axios.delete(`https://api.zoom.us/v2/meetings/${meetingID}/recordings`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      }).data
+
+      console.log(deleted)
+      
+      return deleted
+}
+
 export const getStatus = (req, res, next) => {
     const transactionID = req.params.id;
     const transaction = JSON.parse(db.get(transactionID));
