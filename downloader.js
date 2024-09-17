@@ -1,5 +1,3 @@
-import * as dotenv from 'dotenv' // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
-dotenv.config()
 import axios from 'axios';
 import fs from 'fs'
 import * as stream from 'stream';
@@ -7,42 +5,8 @@ import { db, downloadDirectory } from './server.js';
 import util from 'util'
 import { v4 as uuid } from 'uuid';
 import { zip } from 'zip-a-folder';
-import { GetObjectCommand, S3 } from '@aws-sdk/client-s3'
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { sendEmail } from './send-email.js';
-
-
-
-const s3Client = new S3({
-    forcePathStyle: false, // Configures to use subdomain/virtual calling format.
-    endpoint: "https://zoom-downloads.blr1.digitaloceanspaces.com/",
-    region: "us-east-1",
-    credentials: {
-        accessKeyId: process.env.SPACES_KEY,
-        secretAccessKey: process.env.SPACES_SECRET
-    }
-});
-
-const BUCKET_NAME = "zoom-downloads"
-
-
-const uploadToS3 = async (filePath, transactionID) => {
-    const resp = await s3Client.putObject({
-        Bucket: BUCKET_NAME,
-        Key: transactionID,
-        Body: fs.createReadStream(filePath)
-    })
-
-    return resp
-}
-
-const generatePresignedURL = async (transactionID, expirationDays) => {
-
-    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: transactionID })
-    const url = await getSignedUrl(s3Client, command, { expiresIn: expirationDays * 24 * 60 * 60 })
-
-    return url
-}
+import { generatePresignedURL, uploadToS3 } from './upload-to-s3.js';
 
 
 const pipeline = util.promisify(stream.pipeline);
