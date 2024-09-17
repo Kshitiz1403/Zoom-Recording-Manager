@@ -9,6 +9,7 @@ import { v4 as uuid } from 'uuid';
 import { zip } from 'zip-a-folder';
 import { GetObjectCommand, S3 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import sgMail from '@sendgrid/mail'
 
 
 const s3Client = new S3({
@@ -41,6 +42,26 @@ const generatePresignedURL = async (transactionID, expirationDays) => {
 
     return url
 }
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+
+const sendEmail = async (presignedURL) => {
+    const msg = {
+        from: "zoom@kshitizagrawal.in",
+        to: "sanjeev@dreamsoft4u.in",
+        subject: "Your Zoom Download is Ready",
+        text: "Your Zoom Download is Ready, Click the link below to download it \n" + presignedURL,
+        html: "<strong>Your Zoom Download is Ready, Click the link below to download it</strong> <br> <a href='" + presignedURL + "'>Download</a>"
+    }
+
+    const sent = await sgMail.send(msg)
+
+    console.log("Email sent")
+
+    console.log(sent)
+    return sent
+}
+
 
 const pipeline = util.promisify(stream.pipeline);
 
@@ -110,7 +131,8 @@ export async function downloadFiles(meetings, access_token) {
         const presignedURL = await generatePresignedURL(transactionID, 7);
 
         console.log(presignedURL)
-        // TODO: Upload to S3, Generate PresignURL, Send an email with the presigned URL
+
+        sendEmail(presignedURL);
     }());
     return transactionID;
 }
