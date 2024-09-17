@@ -55,14 +55,21 @@ export async function downloadFiles(meetings, access_token) {
     }
     db.set(transactionID, JSON.stringify(obj));
     const downloads = Promise.all(promises);
-    const status = {};
-    downloads.then(async downloads => {
-        downloads.map(download => {
-            status[download] = "downloaded"
-        })
-        await zip(downloadDirectory + `/${transactionID}`, `./zips/${transactionID}.zip`);
+
+    (async function(){
+        const status = {};
+        const downloaded = await downloads;
+        downloaded.map(download => status[download] = "downloaded")
+
+        const transactionDownloadDir = downloadDirectory + `/${transactionID}`
+        
+        await zip(transactionDownloadDir, `./zips/${transactionID}.zip`);
         db.set(transactionID, JSON.stringify(status));
-    })
+
+        fs.rmSync(transactionDownloadDir, { recursive: true, force: true }); // Removes the downloaded transaction once the zip is successfully created.
+        
+        // TODO: Upload to S3, Generate PresignURL, Send an email with the presigned URL
+    }());
     return transactionID;
 }
 
