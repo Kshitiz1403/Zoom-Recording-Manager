@@ -81,6 +81,8 @@ export async function downloadFiles(meetings, access_token, zoomAccount) {
         console.log(presignedURL)
 
         sendEmail(presignedURL, fileNames, zoomAccount);
+
+        fs.rm(zipPath, () => console.log(`Zip ${zipPath} deleted`))
     }());
 
     return transactionID;
