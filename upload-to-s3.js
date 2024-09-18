@@ -21,7 +21,7 @@ const BUCKET_NAME = "zoom-downloads"
 const uploadToS3 = async (filePath, transactionID) => {
  const resp = await s3Client.putObject({
   Bucket: BUCKET_NAME,
-  Key: transactionID,
+  Key: `${transactionID}.zip`,
   Body: fs.createReadStream(filePath)
  })
 
@@ -30,7 +30,7 @@ const uploadToS3 = async (filePath, transactionID) => {
 
 const generatePresignedURL = async (transactionID, expirationDays) => {
 
- const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: transactionID })
+ const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: `${transactionID}.zip` })
  const url = await getSignedUrl(s3Client, command, { expiresIn: expirationDays * 24 * 60 * 60 })
 
  return url
