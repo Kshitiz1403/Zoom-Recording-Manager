@@ -6,11 +6,11 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 const sendEmail = async (presignedURL) => {
  sgMail.sendMultiple()
- const sent = await sgMail.send({
+ const sent = await sgMail.sendMultiple({
   from: "zoom@kshitizagrawal.in",
   to: ["sanjeev@dreamsoft4u.com", "kshitizagrawal@outlook.com"],
   subject: "Your Zoom Download is Ready",
-  text: `Your Zoom Download is Ready, Click the link below to download it \n" + ${presignedURL}. The link is only valid for 7 days.`,
+  text: `Your Zoom Download is Ready, Click the link below to download it \n" + ${presignedURL}. \nThe link is only valid for 7 days.`,
   html: "<strong>Your Zoom Download is Ready, Click the link below to download it</strong> <br> <a href='" + presignedURL + "'>Download</a> <br> The link is only valid for 7 days."
  })
 
