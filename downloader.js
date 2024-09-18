@@ -27,14 +27,15 @@ const download = async (req, res, next) => {
         },
     }).then(data => data.data['meetings'])
 
-    const downloads = await downloadFiles(meetings, access_token);
+    const downloads = await downloadFiles(meetings, access_token, zoomAccount);
     return res.status(200).json(downloads)
 }
 
 
 
-export async function downloadFiles(meetings, access_token) {
+export async function downloadFiles(meetings, access_token, zoomAccount) {
     const promises = []
+    const fileNames = []
 
     const transactionID = uuid();
     const obj = {};
@@ -44,7 +45,8 @@ export async function downloadFiles(meetings, access_token) {
             const fileSize = file.file_size
             console.log(fileSize)
             let fileDate = dateHandler(meeting.start_time)
-            let fileName = `${meeting.topic} ${fileDate}.${file.file_extension}`
+            let fileName = `${meeting.topic} ${fileDate}.${file.file_extension.toLowerCase()}`
+            fileNames.push(fileName)
             obj[fileName] = "downloading"
 
             const directory = `${downloadDirectory}/${transactionID}`
@@ -78,17 +80,18 @@ export async function downloadFiles(meetings, access_token) {
 
         console.log(presignedURL)
 
-        sendEmail(presignedURL);
+        sendEmail(presignedURL, fileNames, zoomAccount);
     }());
+
     return transactionID;
 }
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 const scheduleMeetingDeletion = async(meetingID, accessToken) =>{
-  
+
   await delay( 10 * 60 * 1000)
-  
+
   const deleted = await axios.delete(`https://api.zoom.us/v2/meetings/${meetingID}/recordings`, {
         headers: {
           Authorization: `Bearer ${accessToken}`
@@ -96,7 +99,7 @@ const scheduleMeetingDeletion = async(meetingID, accessToken) =>{
       }).data
 
       console.log(deleted)
-      
+
       return deleted
 }
 
